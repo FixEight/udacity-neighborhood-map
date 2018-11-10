@@ -45,13 +45,12 @@ function initMap() {
                 title: title,
                 animation: google.maps.Animation.DROP,
             });
-
             // Push the marker to our array of markers.
             this.markers.push(marker);
-            showListings(this.markers);
             // Create an onclick event to open an infowindow at each marker.
             marker.addListener('click', this.toggleBounce);
         }
+        showListings(this.markers);
     }
 
 
@@ -89,31 +88,6 @@ function initMap() {
 
 
     // --------------------------------------------------------
-    // Show all markers on the Google MAP
-    // --------------------------------------------------------
-
-
-    // This function will loop through the listings and hide them all.
-    function hideMarkers(markers) {
-        for (var i = 0; i < markers.length; i++) {
-            markers[i].setMap(null);
-        }
-    }
-
-
-    // --------------------------------------------------------
-    // Show single marker on the Google MAP
-    // --------------------------------------------------------
-
-
-    function showSingleMarker(markers) {
-        markers.setMap(map);
-        bounds.extend(markers.position);
-        map.fitBounds(bounds);
-    }
-
-
-    // --------------------------------------------------------
     // Initialize the Infowindow and populate them with data
     // --------------------------------------------------------
 
@@ -141,11 +115,6 @@ function initMap() {
             var wikiurl = "https://en.wikipedia.org/w/api.php?action=opensearch&search=" +
                 marker.title + "&format=json&callback=wikicallback";
 
-            // Setting error handling
-            var wikiRequestError = setTimeout(function () {
-                infowindow.setContent('<h6>' + marker.title + '</h6><div>"Failed to get Wikipedia resources."</div>');
-            }, 8000);
-
             // AJAX request and handling
             $.ajax({
                 // Setting it as a property
@@ -155,16 +124,19 @@ function initMap() {
                     let self = this;
                     // View the response of server
                     var articlelist = data[1];
-                    self.innerHTML = '<h6>' + marker.title +
+                    self.combineTheHTML = '<h6>' + marker.title +
                         '</h6><div><strong>Relevant Wikipedia Links</strong></div><ul id="error">';
-                    infowindow.setContent(self.innerHTML);
+                    // infowindow.setContent('<h6>' + marker.title +
+                      // '</h6><div><strong>Relevant Wikipedia Links</strong></div><ul id="error">');
                     for (i = 0; i < articlelist.length; i++) {
                         var onearticle = articlelist[i];
                         var url = "https://en.wikipedia.org/wiki/" + onearticle;
-                        self.innerHTML += '<li>' + '<a href="' + url + '">' + onearticle + '</a></li>';
-                        infowindow.setContent(self.innerHTML + '</ul>');
+                        self.combineTheHTML += '<li>' + '<a href="' + url + '">' + onearticle + '</a></li>';
+                        infowindow.setContent(self.combineTheHTML + '</ul>');
                     };
-                    clearTimeout(wikiRequestError);
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    infowindow.setContent('<h6>' + marker.title + '</h6><div>"Failed to get Wikipedia resources."</div>');
                 }
             });
             // Open the infowindow on the correct marker.
@@ -190,6 +162,7 @@ function initMap() {
 
 
     var ViewModel = function () {
+        // init the ko variables
         initMarkers();
         let self = this;
         this.searchInput = ko.observable("");
@@ -208,8 +181,9 @@ function initMap() {
         this.setMarker = function (selectedListItem) {
             for (let i = 0; i < markers.length; i++) {
                 if (selectedListItem.title == markers[i].title) {
-                    hideMarkers(markers);
-                    showSingleMarker(markers[i]);
+                    //showSingleMarker(markers[i]);
+                    bounds.extend(markers[i].position);
+                    map.fitBounds(bounds);
                     new google.maps.event.trigger(markers[i], "click");
                 }
             }
@@ -230,9 +204,6 @@ function initMap() {
                     filteredMarker.push(markers[i]);
                     if (self.sidebarList()[i].title === markers[i].title) {
                         markers[i].setVisible(true);
-                        if (markers[i].getAnimation() == null) {
-                            markers[i].setAnimation(google.maps.Animation.BOUNCE);
-                        }
                     }
                 } else {
                     markers[i].setAnimation(null);
@@ -241,7 +212,6 @@ function initMap() {
             }
             return filteredMarker;
         }, this);
-
     };
     // Start the ViewModel
     ko.applyBindings(new ViewModel());
@@ -258,5 +228,4 @@ mapError = function mapError() {
     document.getElementById('heading').style.display = 'none';
     document.getElementById('error').append(
         "This page didn't load Google Maps correctly. See the JavaScript console for technical details.");
-    this.apierror
 };
